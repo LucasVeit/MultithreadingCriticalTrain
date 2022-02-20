@@ -1,16 +1,16 @@
 #include <iostream>
 #include <chrono>
-#include <thread>
-#include <mutex>
 #include "List.h"
 #include "Item.h"
 
+#include <thread>
+#include <mutex>
+std::mutex illegalWagon;
+std::mutex countingValue;
 //using namespace std;
 #define N_WAGONS 10
 #define MIN_ITEMS 4
 #define MAX_ITEMS 6
-std::mutex illegalWagon;
-std::mutex countingValue;
 
 void Populate(List<List<Item>>* train, int n_wagon, int min_items, int max_items){
     srand(42);
@@ -61,7 +61,6 @@ void Serial(List<List<Item>>* train, List<Item>* illegals, int* totalValue){
         while(items != nullptr){
             if(!items->getData().isLegal()){
                 
-                std::cout << "Deu Ruim" << items << std::endl;
                 item = wagon->getData().remove(items);
                 illegals->insert(item);
             }else{
@@ -71,7 +70,6 @@ void Serial(List<List<Item>>* train, List<Item>* illegals, int* totalValue){
         }  
         wagon = wagon->getNext();
     }
-
 }
 
 void IndividualThread(Node<List<Item>>* wagon, List<Item>* illegals, int* totalValue){
@@ -80,18 +78,21 @@ void IndividualThread(Node<List<Item>>* wagon, List<Item>* illegals, int* totalV
     Node<Item>* items = wagon->getData().getFirst();
     while(items != nullptr){
         if(!items->getData().isLegal()){
-            //SC
+            item = wagon->getData().remove(items);
 
-            //SC
+            illegalWagon.lock();
+            illegals->insert(item);
+            illegalWagon.unlock();
         }else{
             localValue += items->getData().getValue();
         }
 
         items = items->getNext(); 
     }
-    //SC
+
+    countingValue.lock();
     totalValue += localValue;
-    //SC
+    countingValue.unlock();
 }
 
 void Parallel(List<List<Item>>* train, List<Item>* illegals, int* totalValue){
