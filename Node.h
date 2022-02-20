@@ -6,22 +6,15 @@ template <typename T> class Node{
     Node<T> *previous, *next;
     public:
         Node(){
-            //data = T(0);
             previous = nullptr;
             next = nullptr;
         };
-
-        // Node(T _data){
-        //     data = _data;
-        //     previous = nullptr;
-        //     next = nullptr;
-        // };
 
         void setData(const T &_data){
             data = _data;
         }
 
-        T getData(){
+        T& getData(){
             return data;
         };
 

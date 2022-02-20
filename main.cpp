@@ -1,12 +1,11 @@
 #include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
+#include <chrono>
 #include "List.h"
 #include "Item.h"
 //using namespace std;
-#define N_WAGONS 10
-#define MIN_ITEMS 4
-#define MAX_ITEMS 6
+#define N_WAGONS 100000
+#define MIN_ITEMS 1000
+#define MAX_ITEMS 2000
 
 void Populate(List<List<Item>>* train, int n_wagon, int min_items, int max_items){
     srand(42);
@@ -26,7 +25,6 @@ void Populate(List<List<Item>>* train, int n_wagon, int min_items, int max_items
         train->insert(wagon);
         //std::cout << wagon.getSize() << std::endl;
     }
-    std::cout << train->getSize() << std::endl;
 }
 
 void Print(List<List<Item>>* train){
@@ -57,7 +55,6 @@ void Serial(List<List<Item>>* train, List<Item>* illegals, int* totalValue){
         Node<Item>* items = wagon->getData().getFirst();
         while(items != nullptr){
             if(!items->getData().isLegal()){
-                //std::cout << "Removido: " << items->getData().getValue() << std::endl;
                 item = wagon->getData().remove(items);
                 illegals->insert(item);
             }else{
@@ -74,14 +71,18 @@ int main(){
     List<List<Item>>* train = new List<List<Item>>();
     List<Item>* illegals = new List<Item>();
     int* totalValue = 0;
-    Populate(train, N_WAGONS, MIN_ITEMS, MAX_ITEMS);
     
-    Print(train);
+    Populate(train, N_WAGONS, MIN_ITEMS, MAX_ITEMS);
+
+    auto start = std::chrono::high_resolution_clock::now();
 
     Serial(train, illegals, totalValue);
 
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    std::cout << "Time taken by function: " << duration.count() << " microseconds" << std::endl;
         
-    Print(train);
-    PrintIllegal(illegals);
+    //Print(train);
+    //PrintIllegal(illegals);
     return 0;
 }

@@ -1,6 +1,5 @@
 #ifndef LIST_H_INCLUDED
 #define LIST_H_INCLUDED
-#include <iostream>
 #include "Node.h"
 
 template <typename T> class List{
@@ -53,20 +52,15 @@ template <typename T> class List{
 
     T remove(Node<T> *node){
         if(node == first){
-            //std::cout << "First ";
             node->getNext()->setPrevious(nullptr);
             first = node->getNext();
-            //std::cout << "Set first to: " << first << " ";
         }else if(node == last){
-            //std::cout << "Last ";
             node->getPrevious()->setNext(nullptr);
             last = node->getPrevious();
         }else{
-            //std::cout << "Meio ";
             node->getPrevious()->setNext(node->getNext());
             node->getNext()->setPrevious(node->getPrevious());
         }
-        std::cout << "first: " << first->getData().getValue() << std::endl;
         size--;
         return node->getData();
     };
