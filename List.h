@@ -51,6 +51,7 @@ template <typename T> class List{
 
 
     T remove(Node<T> *node){
+        T temp;
         if(node == first){
             node->getNext()->setPrevious(nullptr);
             first = node->getNext();
@@ -61,12 +62,23 @@ template <typename T> class List{
             node->getPrevious()->setNext(node->getNext());
             node->getNext()->setPrevious(node->getPrevious());
         }
+        temp = node->getData();
+        delete node;
         size--;
-        return node->getData();
+        return temp;
     };
 
     ~List(){
+        Node<T> *p = first, *q;
 
+        while(p != nullptr){
+            q = p->getNext();
+            delete p;
+            p = q;
+        }
+        first = nullptr;
+        last = nullptr;
+        size = 0;
     };
 };
 
