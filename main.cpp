@@ -3,11 +3,11 @@
 #include "List.h"
 #include "Item.h"
 //using namespace std;
-#define N_WAGONS 100000
-#define MIN_ITEMS 1000
-#define MAX_ITEMS 2000
+#define N_WAGONS 8
+#define MIN_ITEMS 10000000
+#define MAX_ITEMS 20000000
 #define SEED 42
-#define N_THREAD 8
+//#define N_THREAD 8
 
 #include <semaphore.h>
 #include <thread>
@@ -107,16 +107,16 @@ void IndividualThread(Node<List<Item>>* wagon, List<Item>* illegals, int* totalV
 
 void Parallel(List<List<Item>>* train, List<Item>* illegals, int* totalValue){
 
-    sem_init(&threadCounter, 0, N_THREAD);
+    sem_init(&threadCounter, 0, N_WAGONS);
     //Controla a criação e   acesso de threads
     Node<List<Item>>* wagon = train->getFirst();
-    std::thread threads[N_THREAD];
+    std::thread threads[N_WAGONS];
     for(int i = 0; wagon != nullptr; ++i, wagon = wagon->getNext()){
         sem_wait(&threadCounter);
-        threads[i%N_THREAD]= std::thread(IndividualThread, wagon, illegals, totalValue);
+        threads[i]= std::thread(IndividualThread, wagon, illegals, totalValue);
     }
 
-    for(int i = 0; i < i%N_THREAD; ++i){
+    for(int i = 0; i < N_WAGONS; ++i){
         threads[i].join();
     }
     sem_destroy(&threadCounter);
