@@ -51,8 +51,12 @@ template <typename T> class List{
 
 
     T remove(Node<T> *node){
-        T temp;
-        if(node == first){
+        T temp = node->getData();
+        //std::cout << "Removing: " << node->getData().getValue() << std::endl;
+        if(size == 1){
+            first = nullptr;
+            last = nullptr;
+        }else if(node == first){
             node->getNext()->setPrevious(nullptr);
             first = node->getNext();
         }else if(node == last){
@@ -62,23 +66,13 @@ template <typename T> class List{
             node->getPrevious()->setNext(node->getNext());
             node->getNext()->setPrevious(node->getPrevious());
         }
-        temp = node->getData();
-        delete node;
         size--;
+        delete node;
         return temp;
     };
 
     ~List(){
-        Node<T> *p = first, *q;
 
-        while(p != nullptr){
-            q = p->getNext();
-            delete p;
-            p = q;
-        }
-        first = nullptr;
-        last = nullptr;
-        size = 0;
     };
 };
 

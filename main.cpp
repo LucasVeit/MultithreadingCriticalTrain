@@ -2,18 +2,22 @@
 #include <chrono>
 #include "List.h"
 #include "Item.h"
+//using namespace std;
+#define N_WAGONS 100000
+#define MIN_ITEMS 1000
+#define MAX_ITEMS 2000
+#define SEED 42
+#define N_THREAD 8
 
+#include <semaphore.h>
 #include <thread>
 #include <mutex>
 std::mutex illegalWagon;
 std::mutex countingValue;
-//using namespace std;
-#define N_WAGONS 10
-#define MIN_ITEMS 4
-#define MAX_ITEMS 6
+sem_t threadCounter;
 
 void Populate(List<List<Item>>* train, int n_wagon, int min_items, int max_items){
-    srand(42);
+    srand(SEED);
     int n_items;
     Item item;
     for (int i = 0; i < n_wagon; i++){
@@ -23,17 +27,20 @@ void Populate(List<List<Item>>* train, int n_wagon, int min_items, int max_items
             item.setValue(rand() % 1000);
             item.setIsLegal(rand() % 2);
             wagon.insert(item);
+            //std::cout << wagon->getData().getFirst()->getData().getValue() << std::endl;
+            //std::cout << node->getData().getValue() << std::endl;
+            //std::cout << wagon->getData().getSize() << std::endl;
         }       
         train->insert(wagon);
+        //std::cout << wagon.getSize() << std::endl;
     }
 }
 
 void Print(List<List<Item>>* train){
     Node<List<Item>>* wagon = train->getFirst();
-    std::cout << "Tamanho Trem "<< train->getSize() << std::endl;
-        
-    while(wagon != nullptr){
-        std::cout << "Tamanho Vagao "<< wagon->getData().getSize() << std::endl;
+    while(wagon != nullptr){        
+        while(wagon->getData().getSize() == 0) wagon = wagon->getNext();
+
         Node<Item>* items = wagon->getData().getFirst();
         while(items != nullptr){
             std::cout << items->getData().getValue() << "-" << items->getData().isLegal() << "  ";
@@ -54,22 +61,24 @@ void PrintIllegal(List<Item>* illegals){
 
 void Serial(List<List<Item>>* train, List<Item>* illegals, int* totalValue){
     Node<List<Item>>* wagon = train->getFirst();
-    Item item;   
+    Item item;
     while(wagon != nullptr){
-        Node<Item>* items = wagon->getData().getFirst();
-        
+        //std::cout << "Times " << std::endl;
+        Node<Item> *tempNext, *items = wagon->getData().getFirst();
         while(items != nullptr){
+            tempNext = items->getNext();
             if(!items->getData().isLegal()){
-                
                 item = wagon->getData().remove(items);
                 illegals->insert(item);
             }else{
                 totalValue += items->getData().getValue();
             }
-            items = items->getNext();
-        }  
+            items = tempNext;
+        }
         wagon = wagon->getNext();
+        //std::cout << "Wagon" << wagon << std::endl;
     }
+
 }
 
 void IndividualThread(Node<List<Item>>* wagon, List<Item>* illegals, int* totalValue){
@@ -93,51 +102,55 @@ void IndividualThread(Node<List<Item>>* wagon, List<Item>* illegals, int* totalV
     countingValue.lock();
     totalValue += localValue;
     countingValue.unlock();
+    sem_post(&threadCounter);
 }
 
 void Parallel(List<List<Item>>* train, List<Item>* illegals, int* totalValue){
-    //Controla a criação e acesso de threads
+
+    sem_init(&threadCounter, 0, N_THREAD);
+    //Controla a criação e   acesso de threads
     Node<List<Item>>* wagon = train->getFirst();
-    std::thread threads[N_WAGONS];
+    std::thread threads[N_THREAD];
     for(int i = 0; wagon != nullptr; ++i, wagon = wagon->getNext()){
-        threads[i]= std::thread(IndividualThread, wagon, illegals, totalValue);
+        sem_wait(&threadCounter);
+        threads[i%N_THREAD]= std::thread(IndividualThread, wagon, illegals, totalValue);
     }
 
-    for(int i = 0; i < N_WAGONS; ++i){
+    for(int i = 0; i < i%N_THREAD; ++i){
         threads[i].join();
     }
+    sem_destroy(&threadCounter);
 }
 
 int main(){
     List<List<Item>>* train = new List<List<Item>>();
     List<Item>* illegals = new List<Item>();
-    int* totalValue;
-    totalValue = 0;
+    int* totalValue = 0;
     
     Populate(train, N_WAGONS, MIN_ITEMS, MAX_ITEMS);
 
-    Print(train);
-/*
+    //std::cout << sizeof(*(train->getFirst())) << std::endl << sizeof(*(train->getFirst()->getData().getFirst())) << std::endl;
+    //Print(train);
+
     auto start = std::chrono::high_resolution_clock::now();
-   
-    std::cout << "Deu Ruim" << std::endl;
+
     Serial(train, illegals, totalValue);
-   
-    std::cout << "Deu Ruim" << std::endl;
+
     auto stop = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-    std::cout << "Tempo para executar serial: " << duration.count() << " microseconds" << std::endl;
- 
-      
-    std::cout << "Deu Ruim" << std::endl;
+    std::cout << "Time taken by Serial function: " << duration.count() << " microseconds" << std::endl;
+
+    //Print(train);
+    //PrintIllegal(illegals);
     delete train;
     delete illegals;
+
     train = new List<List<Item>>();
     illegals = new List<Item>();
-    *totalValue = 0;
-   
-    std::cout << "Deu Ruim" << std::endl;
+    totalValue = 0;
+    
     Populate(train, N_WAGONS, MIN_ITEMS, MAX_ITEMS);
+    
 
     start = std::chrono::high_resolution_clock::now();
 
@@ -145,10 +158,6 @@ int main(){
 
     stop = std::chrono::high_resolution_clock::now();
     duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-    std::cout << "Tempo para executar paralelo: " << duration.count() << " microseconds" << std::endl;
- */
-
-    //Print(train);
-    //PrintIllegal(illegals);
+    std::cout << "Time taken by Parallel function: " << duration.count() << " microseconds" << std::endl;
     return 0;
 }

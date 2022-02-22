@@ -36,8 +36,7 @@ template <typename T> class Node{
 
         ~Node(){
             previous = nullptr;
-            next = nullptr;
-            
+            next = nullptr;            
         };
 
 
