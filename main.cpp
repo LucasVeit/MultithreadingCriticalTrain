@@ -1,20 +1,19 @@
 #include <iostream>
 #include <chrono>
+#include <string.h>
 #include "List.h"
 #include "Item.h"
 //using namespace std;
 #define N_WAGONS 8
-#define MIN_ITEMS 10000000
-#define MAX_ITEMS 20000000
+#define MIN_ITEMS 20000000
+#define MAX_ITEMS 30000000
 #define SEED 42
 //#define N_THREAD 8
 
-#include <semaphore.h>
 #include <thread>
 #include <mutex>
 std::mutex illegalWagon;
 std::mutex countingValue;
-sem_t threadCounter;
 
 void Populate(List<List<Item>>* train, int n_wagon, int min_items, int max_items){
     srand(SEED);
@@ -102,62 +101,50 @@ void IndividualThread(Node<List<Item>>* wagon, List<Item>* illegals, int* totalV
     countingValue.lock();
     totalValue += localValue;
     countingValue.unlock();
-    sem_post(&threadCounter);
 }
 
 void Parallel(List<List<Item>>* train, List<Item>* illegals, int* totalValue){
 
-    sem_init(&threadCounter, 0, N_WAGONS);
     //Controla a criação e   acesso de threads
     Node<List<Item>>* wagon = train->getFirst();
     std::thread threads[N_WAGONS];
     for(int i = 0; wagon != nullptr; ++i, wagon = wagon->getNext()){
-        sem_wait(&threadCounter);
         threads[i]= std::thread(IndividualThread, wagon, illegals, totalValue);
     }
 
     for(int i = 0; i < N_WAGONS; ++i){
         threads[i].join();
     }
-    sem_destroy(&threadCounter);
 }
 
-int main(){
+int main(int argc, char *argv[]){
     List<List<Item>>* train = new List<List<Item>>();
     List<Item>* illegals = new List<Item>();
     int* totalValue = 0;
-    
+
+    std::cout << "Populating with pseudo-random values..." << std::endl;
     Populate(train, N_WAGONS, MIN_ITEMS, MAX_ITEMS);
-
-    //std::cout << sizeof(*(train->getFirst())) << std::endl << sizeof(*(train->getFirst()->getData().getFirst())) << std::endl;
-    //Print(train);
-
-    auto start = std::chrono::high_resolution_clock::now();
-
-    Serial(train, illegals, totalValue);
-
-    auto stop = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-    std::cout << "Time taken by Serial function: " << duration.count() << " microseconds" << std::endl;
-
-    //Print(train);
-    //PrintIllegal(illegals);
+    
+    if(!strcmp(argv[1], "-Serial")){
+        std::cout << "Executing Serial algorithm..." << std::endl;
+        auto start = std::chrono::high_resolution_clock::now();
+        Serial(train, illegals, totalValue);
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+        std::cout << "Time taken by Serial function: " << duration.count() << " microseconds" << std::endl;
+    }else if(!strcmp(argv[1], "-Parallel")){
+        std::cout << "Executing Parallel algorithm..." << std::endl;
+        auto start = std::chrono::high_resolution_clock::now();
+        Parallel(train, illegals, totalValue);
+        auto stop = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+        std::cout << "Time taken by Parallel function: " << duration.count() << " microseconds" << std::endl;
+    }else{
+        std::cout << "Enter a valid parameter" << std::endl << "-Serial || -Parallel" << std::endl;
+    }
+   
     delete train;
     delete illegals;
-
-    train = new List<List<Item>>();
-    illegals = new List<Item>();
-    totalValue = 0;
     
-    Populate(train, N_WAGONS, MIN_ITEMS, MAX_ITEMS);
-    
-
-    start = std::chrono::high_resolution_clock::now();
-
-    Parallel(train, illegals, totalValue);
-
-    stop = std::chrono::high_resolution_clock::now();
-    duration = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-    std::cout << "Time taken by Parallel function: " << duration.count() << " microseconds" << std::endl;
     return 0;
 }
